@@ -1,0 +1,31 @@
+services:
+  youtube-monitor:
+    image: ghcr.io/${GITHUB_USERNAME}/youtube-monitor:latest
+    container_name: youtube-monitor
+    restart: unless-stopped
+    ports:
+      - "8010:8000"
+    volumes:
+      - ./data:/app/data
+      - ./static:/app/static:ro
+    environment:
+      - DATABASE_URL=sqlite:///./data/youtube_monitor.db
+      - DEBUG=false
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - SESSION_SECRET_KEY=${SESSION_SECRET_KEY}
+      - SESSION_MAX_AGE=86400
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - YOUTUBE_SETTINGS_FERNET_KEY=${YOUTUBE_SETTINGS_FERNET_KEY}
+      - YOUTUBE_BOOTSTRAP_LITELLM_BASE_URL=${YOUTUBE_BOOTSTRAP_LITELLM_BASE_URL:-}
+      - YOUTUBE_BOOTSTRAP_LITELLM_API_KEY=${YOUTUBE_BOOTSTRAP_LITELLM_API_KEY:-}
+      - YOUTUBE_BOOTSTRAP_PRIMARY_MODEL=${YOUTUBE_BOOTSTRAP_PRIMARY_MODEL:-}
+      - YOUTUBE_BOOTSTRAP_FALLBACK_MODEL=${YOUTUBE_BOOTSTRAP_FALLBACK_MODEL:-}
+      - YOUTUBE_BOOTSTRAP_TAGGING_MODEL=${YOUTUBE_BOOTSTRAP_TAGGING_MODEL:-}
+      - YOUTUBE_BOOTSTRAP_YOUTUBE_API_KEY=${YOUTUBE_BOOTSTRAP_YOUTUBE_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

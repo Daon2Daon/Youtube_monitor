@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* prose 스타일 간소화 (react-markdown용) */
+.prose h1, .prose h2, .prose h3 {
+  @apply font-bold text-gray-900 mt-4 mb-2;
+}
+.prose h1 { @apply text-xl; }
+.prose h2 { @apply text-lg; }
+.prose h3 { @apply text-base; }
+.prose p  { @apply mb-2 leading-relaxed; }
+.prose ul { @apply list-disc pl-5 mb-2 space-y-1; }
+.prose ol { @apply list-decimal pl-5 mb-2 space-y-1; }
+.prose li { @apply text-sm; }
+.prose strong { @apply font-semibold; }
+.prose code { @apply bg-gray-100 px-1 py-0.5 rounded text-xs font-mono; }
+.prose pre  { @apply bg-gray-900 text-gray-100 p-3 rounded-lg overflow-x-auto text-xs mb-2; }
+.prose blockquote { @apply border-l-4 border-gray-300 pl-3 italic text-gray-600 my-2; }
+.prose table { @apply w-full border-collapse text-sm mb-2; }
+.prose th { @apply bg-gray-50 border border-gray-200 px-3 py-1.5 font-medium text-left; }
+.prose td { @apply border border-gray-200 px-3 py-1.5; }

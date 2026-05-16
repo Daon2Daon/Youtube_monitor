@@ -1,0 +1,36 @@
+-- 멱등 시드: INSERT OR IGNORE (UNIQUE category+key)
+INSERT OR IGNORE INTO youtube_settings (category, key, value, value_enc, value_type, is_secret, description) VALUES
+('database', 'host', '', NULL, 'string', 0, 'PG 호스트 (독립 앱에서는 미사용)'),
+('database', 'port', '5432', NULL, 'int', 0, 'PG 포트 (독립 앱에서는 미사용)'),
+('database', 'dbname', 'youtube_monitor', NULL, 'string', 0, '데이터베이스명'),
+('database', 'username', '', NULL, 'string', 0, 'DB 사용자'),
+('database', 'password', NULL, NULL, 'string', 1, 'DB 비밀번호 (Fernet)'),
+('database', 'schema', 'youtube', NULL, 'string', 0, 'DB 스키마명'),
+('database', 'sslmode', 'prefer', NULL, 'string', 0, 'disable/prefer/require'),
+
+('ai_gateway', 'base_url', '', NULL, 'string', 0, 'litellm 엔드포인트'),
+('ai_gateway', 'api_key', NULL, NULL, 'string', 1, 'litellm Master Key (Fernet)'),
+('ai_gateway', 'primary_model', '', NULL, 'string', 0, '멀티모달 분석'),
+('ai_gateway', 'fallback_model', '', NULL, 'string', 0, '텍스트 fallback'),
+('ai_gateway', 'tagging_model', '', NULL, 'string', 0, '태그 정제'),
+('ai_gateway', 'temperature', '0.3', NULL, 'float', 0, '모델 공통 temperature'),
+('ai_gateway', 'max_tokens', '8192', NULL, 'int', 0, 'max_tokens'),
+('ai_gateway', 'daily_budget_usd', '2.0', NULL, 'float', 0, '일일 LLM 비용 한도(USD)'),
+
+('polling', 'master_interval_min', '12', NULL, 'int', 0, '전체 모니터링 주기(분)'),
+('polling', 'default_channel_interval_min', '720', NULL, 'int', 0, '채널별 모니터링 주기 기본값(분)'),
+('polling', 'youtube_api_key', NULL, NULL, 'string', 1, 'YouTube Data API 키 (Fernet)'),
+('polling', 'youtube_daily_quota', '10000', NULL, 'int', 0, 'YouTube API 일일 unit 한도'),
+('polling', 'window_hours', '24', NULL, 'int', 0, '(레거시) 신규 영상 인정 윈도우(시간)'),
+('polling', 'window_days', '1', NULL, 'int', 0, '신규 영상 인정 윈도우(일)'),
+('polling', 'max_concurrent_channels', '5', NULL, 'int', 0, '폴링 동시 채널 수'),
+('polling', 'max_concurrent_analyses', '3', NULL, 'int', 0, '분석 동시 실행 수'),
+('polling', 'analysis_interval_sec', '120', NULL, 'int', 0, '영상 간 AI 분석 대기 시간(초)'),
+
+('notification', 'telegram_enabled', 'true', NULL, 'bool', 0, 'Telegram 알림 ON/OFF'),
+('notification', 'telegram_chat_id', '', NULL, 'string', 0, 'Telegram 수신 Chat ID'),
+('notification', 'send_mode', 'immediate', NULL, 'string', 0, '발송 모드: immediate(즉시) | scheduled(예약)'),
+('notification', 'scheduled_times', '[]', NULL, 'json', 0, '예약 발송 시각 목록 (JSON 배열: ["HH:MM", ...])'),
+('notification', 'scheduled_max_per_run', '5', NULL, 'int', 0, '예약발송 한 회차당 최대 발송 건수'),
+('notification', 'wait_between_messages_sec', '30', NULL, 'int', 0, '채널 간 발송 대기(초)'),
+('notification', 'low_confidence_threshold', '0.5', NULL, 'float', 0, '저신뢰도 배지 임계값');
