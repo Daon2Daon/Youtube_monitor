@@ -338,15 +338,26 @@ async def _youtube_pending_analysis_async() -> None:
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     batch_limit = 1
 
+    from app.services.youtube.analysis_retry import reset_failed_videos_for_retry
+
     n_reset = 0
+    n_retry = 0
     claimed: List[int] = []
     async with session_factory() as sess:
         async with sess.begin():
             n_reset = await reset_stale_processing_videos(sess, STALE_PROCESSING_RESET_MINUTES)
+            retried_pks = await reset_failed_videos_for_retry(sess, polling_cfg)
+            n_retry = len(retried_pks)
             claimed = await claim_pending_video_pks(sess, batch_limit)
 
     if n_reset:
         print(f"♻️  YouTube: 오래된 분석중(processing) 영상 {n_reset}건을 pending으로 복구")
+    if n_retry:
+        print(
+            f"♻️  YouTube: 분석 실패 영상 {n_retry}건을 pending으로 복구 "
+            f"(자동 재시도, 간격 {polling_cfg.analysis_retry_interval_hours}시간, "
+            f"최대 {polling_cfg.analysis_max_retries}회)"
+        )
 
     if not claimed:
         return
@@ -421,6 +432,7 @@ async def _analyze_batch(
                                     .values(
                                         analysis_status="failed",
                                         analysis_error=str(e)[:500],
+                                        retry_count=YoutubeVideo.retry_count + 1,
                                         updated_at=datetime.now(timezone.utc),
                                     )
                                 )

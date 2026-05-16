@@ -54,6 +54,9 @@ export interface RuntimeSettingsResponse {
   max_concurrent_channels: number
   max_concurrent_analyses: number
   analysis_interval_sec: number
+  analysis_retry_enabled: boolean
+  analysis_max_retries: number
+  analysis_retry_interval_hours: number
   telegram_enabled: boolean
   wait_between_messages_sec: number
   low_confidence_threshold: number
@@ -69,6 +72,9 @@ export interface RuntimeSettingsUpdate {
   max_concurrent_channels?: number
   max_concurrent_analyses?: number
   analysis_interval_sec?: number
+  analysis_retry_enabled?: boolean
+  analysis_max_retries?: number
+  analysis_retry_interval_hours?: number
   telegram_enabled?: boolean
   wait_between_messages_sec?: number
   low_confidence_threshold?: number

@@ -97,6 +97,19 @@ class RuntimeSettingsResponse(BaseModel):
     analysis_interval_sec: int = Field(
         description="영상 간 AI 분석 대기 시간(초). 0이면 병렬 처리."
     )
+    analysis_retry_enabled: bool = Field(
+        description="분석 실패(failed) 영상을 간격·횟수 제한 내에서 자동 pending 복구"
+    )
+    analysis_max_retries: int = Field(
+        ge=0,
+        le=20,
+        description="자동 재시도 최대 횟수 (retry_count 상한, 미만일 때만 복구)",
+    )
+    analysis_retry_interval_hours: int = Field(
+        ge=1,
+        le=168,
+        description="재시도 간격(시간). 마지막 실패(updated_at) 후 경과 필요",
+    )
     # notification
     telegram_enabled: bool
     wait_between_messages_sec: int
@@ -133,6 +146,9 @@ class RuntimeSettingsUpdate(BaseModel):
     analysis_interval_sec: Optional[int] = Field(
         None, ge=0, description="영상 간 AI 분석 대기 시간(초). 0이면 병렬 처리."
     )
+    analysis_retry_enabled: Optional[bool] = None
+    analysis_max_retries: Optional[int] = Field(None, ge=0, le=20)
+    analysis_retry_interval_hours: Optional[int] = Field(None, ge=1, le=168)
     # notification
     telegram_enabled: Optional[bool] = None
     wait_between_messages_sec: Optional[int] = Field(None, ge=0)

@@ -288,7 +288,11 @@ class AnalysisPipeline:
         await session.execute(
             update(YoutubeVideo)
             .where(YoutubeVideo.video_pk == video_pk)
-            .values(analysis_status="done")
+            .values(
+                analysis_status="done",
+                retry_count=0,
+                analysis_error=None,
+            )
         )
 
         # Telegram 발송은 트랜잭션 커밋 후 호출해야 함 (save_to_db는 보통 begin() 안에서 실행됨).

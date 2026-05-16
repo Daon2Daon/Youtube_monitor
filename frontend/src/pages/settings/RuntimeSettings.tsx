@@ -78,6 +78,9 @@ export default function RuntimeSettings() {
         max_concurrent_channels: d.max_concurrent_channels,
         max_concurrent_analyses: d.max_concurrent_analyses,
         analysis_interval_sec: d.analysis_interval_sec,
+        analysis_retry_enabled: d.analysis_retry_enabled,
+        analysis_max_retries: d.analysis_max_retries,
+        analysis_retry_interval_hours: d.analysis_retry_interval_hours,
       })
     } catch (e) {
       setError((e as Error).message)
@@ -103,6 +106,9 @@ export default function RuntimeSettings() {
         max_concurrent_channels: rest.max_concurrent_channels,
         max_concurrent_analyses: rest.max_concurrent_analyses,
         analysis_interval_sec: rest.analysis_interval_sec,
+        analysis_retry_enabled: rest.analysis_retry_enabled,
+        analysis_max_retries: rest.analysis_max_retries,
+        analysis_retry_interval_hours: rest.analysis_retry_interval_hours,
       }
       if (youtube_api_key) payload.youtube_api_key = youtube_api_key
       const updated = await runtimeApi.update(payload)
@@ -271,6 +277,62 @@ export default function RuntimeSettings() {
               <p className="text-xs text-gray-400 mt-1">
                 스케줄 기반 미분석 처리는 현재 구현에서 매 실행당 1건·세마포어 1로 고정됩니다. 이 슬라이더는 향후 확장이나 다른 코드 경로와의 호환을 위해 유지됩니다.
               </p>
+            </div>
+
+            <div className="md:col-span-2 border border-gray-200 rounded-lg p-4 space-y-4 bg-gray-50/80">
+              <div className="flex items-start gap-3">
+                <input
+                  id="analysis_retry_enabled"
+                  type="checkbox"
+                  checked={form.analysis_retry_enabled ?? true}
+                  onChange={(e) => setF('analysis_retry_enabled', e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <div>
+                  <label htmlFor="analysis_retry_enabled" className="text-sm font-medium text-gray-800">
+                    분석 실패 자동 재시도
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1">
+                    failed 상태 영상을 설정한 간격·횟수 내에서 pending으로 되돌린 뒤, AI 배치 분석 스케줄이 다시 분석합니다.
+                  </p>
+                </div>
+              </div>
+              {form.analysis_retry_enabled !== false && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      최대 재시도 횟수
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={form.analysis_max_retries ?? 3}
+                      onChange={(e) => setF('analysis_max_retries', Number(e.target.value))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      실패 누적(retry_count)이 이 값 미만일 때만 자동 복구 (기본 3회)
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      재시도 간격 (시간)
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={168}
+                      value={form.analysis_retry_interval_hours ?? 6}
+                      onChange={(e) => setF('analysis_retry_interval_hours', Number(e.target.value))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      마지막 실패 후 이 시간이 지나야 pending으로 복구 (기본 6시간)
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

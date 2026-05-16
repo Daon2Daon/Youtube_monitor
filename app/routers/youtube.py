@@ -731,7 +731,8 @@ async def _trigger_reanalyze(video_pk: int, custom_prompt: Optional[str] = None)
                         .where(YoutubeVideo.video_pk == video_pk)
                         .values(
                             analysis_status="failed",
-                            analysis_error=str(exc),
+                            analysis_error=str(exc)[:500],
+                            retry_count=YoutubeVideo.retry_count + 1,
                             updated_at=datetime.now(timezone.utc),
                         )
                     )
@@ -1202,6 +1203,9 @@ def get_runtime_settings():
         max_concurrent_channels=p.max_concurrent_channels,
         max_concurrent_analyses=p.max_concurrent_analyses,
         analysis_interval_sec=p.analysis_interval_sec,
+        analysis_retry_enabled=p.analysis_retry_enabled,
+        analysis_max_retries=p.analysis_max_retries,
+        analysis_retry_interval_hours=p.analysis_retry_interval_hours,
         telegram_enabled=n.telegram_enabled,
         wait_between_messages_sec=n.wait_between_messages_sec,
         low_confidence_threshold=n.low_confidence_threshold,
@@ -1220,6 +1224,9 @@ def update_runtime_settings(body: RuntimeSettingsUpdate, db=Depends(_settings_db
         "max_concurrent_channels": ("polling", "max_concurrent_channels", False),
         "max_concurrent_analyses": ("polling", "max_concurrent_analyses", False),
         "analysis_interval_sec": ("polling", "analysis_interval_sec", False),
+        "analysis_retry_enabled": ("polling", "analysis_retry_enabled", False),
+        "analysis_max_retries": ("polling", "analysis_max_retries", False),
+        "analysis_retry_interval_hours": ("polling", "analysis_retry_interval_hours", False),
     }
     notif_fields = {
         "telegram_enabled": ("notification", "telegram_enabled", False),

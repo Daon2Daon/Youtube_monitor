@@ -26,6 +26,9 @@ INSERT OR IGNORE INTO youtube_settings (category, key, value, value_enc, value_t
 ('polling', 'max_concurrent_channels', '5', NULL, 'int', 0, '폴링 동시 채널 수'),
 ('polling', 'max_concurrent_analyses', '3', NULL, 'int', 0, '분석 동시 실행 수'),
 ('polling', 'analysis_interval_sec', '120', NULL, 'int', 0, '영상 간 AI 분석 대기 시간(초)'),
+('polling', 'analysis_retry_enabled', 'true', NULL, 'bool', 0, '분석 실패 자동 재시도 ON/OFF'),
+('polling', 'analysis_max_retries', '3', NULL, 'int', 0, '자동 재시도 최대 횟수 (실패 누적 retry_count 상한)'),
+('polling', 'analysis_retry_interval_hours', '6', NULL, 'int', 0, '재시도 간격(시간), 마지막 실패 후 경과'),
 
 ('notification', 'telegram_enabled', 'true', NULL, 'bool', 0, 'Telegram 알림 ON/OFF'),
 ('notification', 'telegram_chat_id', '', NULL, 'string', 0, 'Telegram 수신 Chat ID'),

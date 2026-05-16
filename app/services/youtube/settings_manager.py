@@ -145,6 +145,9 @@ class PollingSettings:
     max_concurrent_channels: int = 5
     max_concurrent_analyses: int = 3
     analysis_interval_sec: int = 120
+    analysis_retry_enabled: bool = True
+    analysis_max_retries: int = 3
+    analysis_retry_interval_hours: int = 6
 
     @classmethod
     def from_rows(cls, rows: list[YoutubeSetting], fernet: Fernet | None) -> PollingSettings:
@@ -176,6 +179,25 @@ class PollingSettings:
             ),
             analysis_interval_sec=int(
                 _row_typed(by_key.get("analysis_interval_sec"), fernet) or 120
+            ),
+            analysis_retry_enabled=(
+                True
+                if _row_typed(by_key.get("analysis_retry_enabled"), fernet) is None
+                else bool(_row_typed(by_key.get("analysis_retry_enabled"), fernet))
+            ),
+            analysis_max_retries=max(
+                0,
+                min(
+                    20,
+                    int(_row_typed(by_key.get("analysis_max_retries"), fernet) or 3),
+                ),
+            ),
+            analysis_retry_interval_hours=max(
+                1,
+                min(
+                    168,
+                    int(_row_typed(by_key.get("analysis_retry_interval_hours"), fernet) or 6),
+                ),
             ),
         )
 
