@@ -29,6 +29,9 @@ export interface NotificationSettingsResponse {
   scheduled_max_per_run: number
   wait_between_messages_sec: number
   low_confidence_threshold: number
+  quiet_hours_enabled: boolean
+  quiet_hours_start: string
+  quiet_hours_end: string
 }
 
 export interface NotificationSettingsUpdate {
@@ -38,6 +41,9 @@ export interface NotificationSettingsUpdate {
   scheduled_max_per_run?: number
   wait_between_messages_sec?: number
   low_confidence_threshold?: number
+  quiet_hours_enabled?: boolean
+  quiet_hours_start?: string
+  quiet_hours_end?: string
 }
 
 // ── API ───────────────────────────────────────────────────────────────────────

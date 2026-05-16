@@ -189,6 +189,20 @@ class PollTriggerResponse(BaseModel):
     message: str
 
 
+class VideoNotifyRequest(BaseModel):
+    """영상 상세에서 수동 Telegram 발송."""
+    force: bool = Field(
+        False,
+        description="true이면 이미 발송된 영상(notified_at 있음)도 다시 발송",
+    )
+
+
+class VideoNotifyResponse(BaseModel):
+    success: bool
+    message: str
+    notified_at: Optional[datetime] = None
+
+
 # ── 즉시(추가 영상) 분석 ────────────────────────────────────────────────────────
 
 class InstantAnalyzeRequest(BaseModel):

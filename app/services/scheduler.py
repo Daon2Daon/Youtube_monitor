@@ -18,6 +18,8 @@ from app.config import settings
 class SchedulerService:
     """YouTube 모니터 잡 스케줄러."""
 
+    CATCHUP_JOB_ID = "youtube_immediate_catchup"
+
     def __init__(self):
         jobstores = {
             "default": SQLAlchemyJobStore(url=settings.DATABASE_URL)
@@ -183,8 +185,9 @@ class SchedulerService:
         except Exception as e:
             print(f"❌ YouTube Gateway 헬스체크 Job 등록 실패: {e}")
 
-        # 예약발송 잡도 함께 초기화
+        # 예약발송·즉시발송 야간 보정 잡 초기화
         self.setup_youtube_notify_jobs()
+        self.setup_youtube_catchup_job()
 
     def update_youtube_master_poll_job(self):
         """polling 주기 변경 시 YouTube 폴링/분석 interval 잡만 재등록."""
@@ -267,8 +270,72 @@ class SchedulerService:
             except Exception as e:
                 print(f"❌ YouTube 예약발송 Job 등록 실패 ({time_str}): {e}")
 
+    def setup_youtube_catchup_job(self):
+        """
+        즉시발송 + 야간 알림 제한 시, quiet_hours_end + 5분 Cron 보정 잡 등록.
+        - send_mode != immediate 또는 quiet_hours 비활성 시 등록하지 않음.
+        - start == end (종일 제한) 시 등록하지 않음.
+        """
+        from app.services.youtube.notify_service import youtube_immediate_catchup_sync
+        from app.services.youtube.quiet_hours import (
+            catchup_cron_time,
+            is_all_day_quiet_hours,
+        )
+
+        try:
+            from app.services.youtube.settings_manager import get_youtube_settings_manager
+            mgr = get_youtube_settings_manager()
+            notif_cfg = mgr.get_notification()
+        except Exception as e:
+            print(f"⚠️ YouTube 야간 보정발송 설정 로드 실패: {e}")
+            return
+
+        if notif_cfg.send_mode != "immediate" or not notif_cfg.quiet_hours_enabled:
+            return
+
+        if is_all_day_quiet_hours(notif_cfg.quiet_hours_start, notif_cfg.quiet_hours_end):
+            print("⚠️ YouTube 야간 보정발송: 종일 제한(start==end) — 보정 Cron 미등록")
+            return
+
+        cron = catchup_cron_time(notif_cfg.quiet_hours_end)
+        if cron is None:
+            print(
+                f"⚠️ YouTube 야간 보정발송: 종료 시각 형식 오류 "
+                f"'{notif_cfg.quiet_hours_end}' — skip"
+            )
+            return
+
+        hour, minute = cron
+        try:
+            self.add_cron_job(
+                func=youtube_immediate_catchup_sync,
+                job_id=self.CATCHUP_JOB_ID,
+                hour=hour,
+                minute=minute,
+                misfire_grace_time=3600,
+                max_instances=1,
+                coalesce=True,
+            )
+            print(
+                f"✅ YouTube 야간 보정발송 Job 등록: {self.CATCHUP_JOB_ID} "
+                f"(제한 종료 {notif_cfg.quiet_hours_end} +5분 → {hour:02d}:{minute:02d} KST)"
+            )
+        except Exception as e:
+            print(f"❌ YouTube 야간 보정발송 Job 등록 실패: {e}")
+
+    def update_youtube_catchup_job(self):
+        """notification 설정 변경 시 즉시발송 야간 보정 Cron 잡 재등록."""
+        try:
+            self.remove_job(self.CATCHUP_JOB_ID)
+        except Exception:
+            pass
+        try:
+            self.setup_youtube_catchup_job()
+        except Exception as e:
+            print(f"❌ YouTube 야간 보정발송 Job 갱신 실패: {e}")
+
     def update_youtube_notify_jobs(self):
-        """notification 설정 변경 시 기존 예약발송 잡을 전부 제거하고 재등록."""
+        """notification 설정 변경 시 예약발송·야간 보정 잡 재등록."""
         try:
             existing_ids = [
                 job.id for job in self.scheduler.get_jobs()
@@ -277,8 +344,9 @@ class SchedulerService:
             for job_id in existing_ids:
                 self.remove_job(job_id)
             self.setup_youtube_notify_jobs()
+            self.update_youtube_catchup_job()
         except Exception as e:
-            print(f"❌ YouTube 예약발송 Job 갱신 실패: {e}")
+            print(f"❌ YouTube 알림 발송 Job 갱신 실패: {e}")
 
 
 # 싱글톤 인스턴스

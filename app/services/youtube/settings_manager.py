@@ -189,6 +189,9 @@ class NotificationSettings:
     wait_between_messages_sec: int = 30
     low_confidence_threshold: float = 0.5
     telegram_chat_id: str = ""
+    quiet_hours_enabled: bool = False
+    quiet_hours_start: str = "22:00"
+    quiet_hours_end: str = "07:00"
 
     @classmethod
     def from_rows(cls, rows: list[YoutubeSetting], fernet: Fernet | None) -> NotificationSettings:
@@ -229,6 +232,15 @@ class NotificationSettings:
                 _row_typed(by_key.get("low_confidence_threshold"), fernet) or 0.5
             ),
             telegram_chat_id=str(_row_typed(by_key.get("telegram_chat_id"), fernet) or ""),
+            quiet_hours_enabled=bool(
+                _row_typed(by_key.get("quiet_hours_enabled"), fernet) or False
+            ),
+            quiet_hours_start=str(
+                _row_typed(by_key.get("quiet_hours_start"), fernet) or "22:00"
+            ),
+            quiet_hours_end=str(
+                _row_typed(by_key.get("quiet_hours_end"), fernet) or "07:00"
+            ),
         )
 
 

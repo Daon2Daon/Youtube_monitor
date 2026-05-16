@@ -224,6 +224,8 @@ class YoutubeBot:
         session_factory: async_sessionmaker,
         video_pk: int,
         low_confidence_threshold: float = 0.5,
+        *,
+        force: bool = False,
     ) -> bool:
         """DB 트랜잭션과 Telegram 네트워크 호출을 분리한 단건 발송.
 
@@ -235,6 +237,26 @@ class YoutubeBot:
 
         def elapsed_ms() -> int:
             return int((time.monotonic() - t0) * 1000)
+
+        from app.services.youtube.quiet_hours import is_quiet_hours_now, quiet_hours_label
+        from app.services.youtube.settings_manager import get_youtube_settings_manager
+
+        notif_cfg = get_youtube_settings_manager().get_notification()
+        if is_quiet_hours_now(
+            notif_cfg.quiet_hours_enabled,
+            notif_cfg.quiet_hours_start,
+            notif_cfg.quiet_hours_end,
+        ):
+            label = quiet_hours_label(notif_cfg.quiet_hours_start, notif_cfg.quiet_hours_end)
+            print(f"ℹ️  YoutubeBot: 야간 알림 제한 시간대 — 발송 skip (video_pk={video_pk}, {label})")
+            await _write_notify_job_log(
+                channel_pk=None,
+                video_pk=video_pk,
+                status=_STATUS_SKIP,
+                message=f"야간 알림 제한 ({label})",
+                duration_ms=elapsed_ms(),
+            )
+            return False
 
         # ── Phase 1: DB 읽기 ────────────────────────────────────────
         video_data: Optional[dict] = None
@@ -251,7 +273,7 @@ class YoutubeBot:
                     )
                     return False
 
-                if video.notified_at is not None:
+                if video.notified_at is not None and not force:
                     await _write_notify_job_log(
                         channel_pk=video.channel_pk, video_pk=video_pk,
                         status=_STATUS_SKIP, message="이미 발송됨 (notified_at)",

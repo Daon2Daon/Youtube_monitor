@@ -45,6 +45,8 @@ from app.schemas.youtube import (
     StatsResponse,
     TagResponse,
     VideoDetailResponse,
+    VideoNotifyRequest,
+    VideoNotifyResponse,
     VideoResponse,
     VideoSummaryEmbed,
 )
@@ -516,6 +518,112 @@ async def delete_video(
     await session.delete(video)
 
 
+@router.post(
+    "/videos/{video_pk}/notify",
+    status_code=status.HTTP_200_OK,
+    response_model=VideoNotifyResponse,
+)
+async def notify_video_manual(
+    video_pk: int,
+    body: VideoNotifyRequest = VideoNotifyRequest(),
+):
+    """분석 완료 영상을 Telegram으로 수동 발송 (즉시/예약 모드와 무관)."""
+    from app.services.youtube.db_engine import db_engine_manager
+    from app.services.youtube.youtube_bot import youtube_bot
+
+    mgr = get_youtube_settings_manager()
+    notif_cfg = mgr.get_notification()
+
+    if not notif_cfg.telegram_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Telegram 알림이 비활성화되어 있습니다. 설정 → 알림에서 활성화해 주세요.",
+        )
+
+    if not (notif_cfg.telegram_chat_id or "").strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Telegram Chat ID가 설정되지 않았습니다. 설정 → 알림에서 Chat ID를 등록해 주세요.",
+        )
+
+    from app.services.youtube.quiet_hours import is_quiet_hours_now, quiet_hours_label
+
+    if is_quiet_hours_now(
+        notif_cfg.quiet_hours_enabled,
+        notif_cfg.quiet_hours_start,
+        notif_cfg.quiet_hours_end,
+    ):
+        label = quiet_hours_label(notif_cfg.quiet_hours_start, notif_cfg.quiet_hours_end)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"야간 알림 제한 시간대({label})에는 발송할 수 없습니다. 제한 시간이 끝난 뒤 다시 시도하세요.",
+        )
+
+    try:
+        engine = await db_engine_manager.get_engine()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"DB 연결 실패: {exc}",
+        ) from exc
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with session_factory() as sess:
+        video = await sess.get(YoutubeVideo, video_pk)
+        if not video:
+            raise HTTPException(status_code=404, detail="영상을 찾을 수 없습니다.")
+
+        if video.analysis_status != "done":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"분석이 완료된 영상만 발송할 수 있습니다. "
+                    f"(현재 상태: {video.analysis_status})"
+                ),
+            )
+
+        analysis_r = await sess.execute(
+            select(YoutubeVideoAnalysis).where(
+                YoutubeVideoAnalysis.video_pk == video_pk
+            )
+        )
+        if analysis_r.scalar_one_or_none() is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="분석 결과가 없어 발송할 수 없습니다.",
+            )
+
+        if video.notified_at is not None and not body.force:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="이미 Telegram으로 발송된 영상입니다. 재발송하려면 force=true로 요청하세요.",
+            )
+
+    ok = await youtube_bot.notify_standalone(
+        session_factory=session_factory,
+        video_pk=video_pk,
+        low_confidence_threshold=notif_cfg.low_confidence_threshold,
+        force=body.force,
+    )
+
+    async with session_factory() as sess:
+        video = await sess.get(YoutubeVideo, video_pk)
+        notified_at = video.notified_at if video else None
+
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Telegram 발송에 실패했습니다. TELEGRAM_BOT_TOKEN·Chat ID·job_logs(notify)를 확인하세요.",
+        )
+
+    return VideoNotifyResponse(
+        success=True,
+        message="Telegram 발송이 완료되었습니다." + (" (재발송)" if body.force else ""),
+        notified_at=notified_at,
+    )
+
+
 class ReanalyzeRequest(BaseModel):
     custom_prompt: Optional[str] = Field(
         None, description="해당 영상 전용 분석 프롬프트. 미입력 시 기본 프롬프트 사용."
@@ -596,6 +704,8 @@ async def _trigger_reanalyze(video_pk: int, custom_prompt: Optional[str] = None)
                     published_at_str=video.published_at.isoformat(),
                     custom_prompt=custom_prompt,
                 )
+
+        await notify_video_callback(video_pk)
 
         elapsed_ms = int((time.monotonic() - start) * 1000)
         await write_job_log(
@@ -1197,6 +1307,9 @@ def _notification_response() -> NotificationSettingsResponse:
         scheduled_max_per_run=n.scheduled_max_per_run,
         wait_between_messages_sec=n.wait_between_messages_sec,
         low_confidence_threshold=n.low_confidence_threshold,
+        quiet_hours_enabled=n.quiet_hours_enabled,
+        quiet_hours_start=n.quiet_hours_start,
+        quiet_hours_end=n.quiet_hours_end,
     )
 
 
@@ -1217,6 +1330,9 @@ def update_notification_settings(body: NotificationSettingsUpdate, db=Depends(_s
         "scheduled_max_per_run": "scheduled_max_per_run",
         "wait_between_messages_sec": "wait_between_messages_sec",
         "low_confidence_threshold": "low_confidence_threshold",
+        "quiet_hours_enabled": "quiet_hours_enabled",
+        "quiet_hours_start": "quiet_hours_start",
+        "quiet_hours_end": "quiet_hours_end",
     }
     for attr, key in simple_fields.items():
         if attr in data:

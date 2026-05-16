@@ -407,6 +407,9 @@ async def _analyze_batch(
                                 channel_name=channel.channel_name if channel else "",
                                 published_at_str=video.published_at.isoformat(),
                             )
+                    from app.services.youtube.youtube_bot import notify_video_callback
+
+                    await notify_video_callback(video_pk)
                 except Exception as e:
                     print(f"❌ 분석 실패 (video_pk={video_pk}): {e}")
                     try:

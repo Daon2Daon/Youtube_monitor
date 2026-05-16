@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import SessionLocal
 from app.models.youtube_setting import YoutubeSetting
 from app.services.auth.session_auth import (
@@ -75,10 +76,12 @@ async def telegram_status():
     mgr = get_youtube_settings_manager()
     notif_cfg = mgr.get_notification()
     chat_id = (notif_cfg.telegram_chat_id or "").strip()
+    bot_token = (settings.TELEGRAM_BOT_TOKEN or "").strip()
     return JSONResponse(
         content={
             "telegram_connected": bool(chat_id),
             "chat_id": chat_id or None,
+            "bot_token_configured": bool(bot_token),
         }
     )
 

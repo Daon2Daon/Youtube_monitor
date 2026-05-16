@@ -33,4 +33,7 @@ INSERT OR IGNORE INTO youtube_settings (category, key, value, value_enc, value_t
 ('notification', 'scheduled_times', '[]', NULL, 'json', 0, '예약 발송 시각 목록 (JSON 배열: ["HH:MM", ...])'),
 ('notification', 'scheduled_max_per_run', '5', NULL, 'int', 0, '예약발송 한 회차당 최대 발송 건수'),
 ('notification', 'wait_between_messages_sec', '30', NULL, 'int', 0, '채널 간 발송 대기(초)'),
-('notification', 'low_confidence_threshold', '0.5', NULL, 'float', 0, '저신뢰도 배지 임계값');
+('notification', 'low_confidence_threshold', '0.5', NULL, 'float', 0, '저신뢰도 배지 임계값'),
+('notification', 'quiet_hours_enabled', 'false', NULL, 'bool', 0, '야간 알림 제한 ON/OFF (KST)'),
+('notification', 'quiet_hours_start', '22:00', NULL, 'string', 0, '야간 제한 시작 HH:MM (KST)'),
+('notification', 'quiet_hours_end', '07:00', NULL, 'string', 0, '야간 제한 종료 HH:MM (KST)');

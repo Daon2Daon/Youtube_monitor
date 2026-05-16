@@ -155,6 +155,11 @@ class NotificationSettingsResponse(BaseModel):
     )
     wait_between_messages_sec: int = Field(description="발송 건 간 대기 시간 (초)")
     low_confidence_threshold: float = Field(description="저신뢰도 배지 임계값 (0.0 ~ 1.0)")
+    quiet_hours_enabled: bool = Field(
+        description="야간(지정 시간) Telegram 발송 제한 활성화 (KST)"
+    )
+    quiet_hours_start: str = Field(description="제한 시작 시각 HH:MM (KST)")
+    quiet_hours_end: str = Field(description="제한 종료 시각 HH:MM (KST, 익일 가능)")
 
 
 class NotificationSettingsUpdate(BaseModel):
@@ -164,6 +169,18 @@ class NotificationSettingsUpdate(BaseModel):
     scheduled_max_per_run: Optional[int] = Field(None, ge=1, le=50)
     wait_between_messages_sec: Optional[int] = Field(None, ge=0, le=600)
     low_confidence_threshold: Optional[float] = Field(None, ge=0.0, le=1.0)
+    quiet_hours_enabled: Optional[bool] = None
+    quiet_hours_start: Optional[str] = None
+    quiet_hours_end: Optional[str] = None
+
+    @field_validator("quiet_hours_start", "quiet_hours_end")
+    @classmethod
+    def validate_quiet_hours_time(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        if not _TIME_RE.match(v):
+            raise ValueError(f"시각 형식이 올바르지 않습니다 (HH:MM): {v!r}")
+        return v
 
     @field_validator("scheduled_times")
     @classmethod

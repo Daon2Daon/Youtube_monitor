@@ -201,6 +201,18 @@ export const videoApi = {
     }),
 
   remove: (pk: number) => request<void>(`/videos/${pk}`, { method: 'DELETE' }),
+
+  notify: (pk: number, force = false) =>
+    request<VideoNotifyResponse>(`/videos/${pk}/notify`, {
+      method: 'POST',
+      body: JSON.stringify({ force }),
+    }),
+}
+
+export interface VideoNotifyResponse {
+  success: boolean
+  message: string
+  notified_at: string | null
 }
 
 // ── 태그 API ─────────────────────────────────────────────────────────────────

@@ -291,8 +291,8 @@ class AnalysisPipeline:
             .values(analysis_status="done")
         )
 
-        if self._notify_callback:
-            await self._notify_callback(video_pk)
+        # Telegram 발송은 트랜잭션 커밋 후 호출해야 함 (save_to_db는 보통 begin() 안에서 실행됨).
+        # notify_video_callback은 monitor_service / youtube 라우터에서 커밋 뒤 호출.
 
     async def run_and_save(
         self,

@@ -1,0 +1,46 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# YouTube Monitor — 원격 서버 Docker 배포 (Synology NAS 등)
+#
+# 사전 준비
+#   1. 호스트에 데이터 디렉터리 생성 및 권한 부여
+#        mkdir -p /volume1/docker/kt_youtube_monitor
+#   2. 배포 디렉터리에 .env 파일 배치 (.env.example 참고)
+#        - GITHUB_USERNAME (GHCR 이미지 pull용)
+#        - ADMIN_PASSWORD, SESSION_SECRET_KEY 등
+#   3. GHCR 로그인 (비공개 이미지인 경우)
+#        echo $TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+#
+# 배포
+#   docker compose -f docker-compose.deploy.yml pull
+#   docker compose -f docker-compose.deploy.yml up -d
+#
+# 로그 / 중지
+#   docker compose -f docker-compose.deploy.yml logs -f
+#   docker compose -f docker-compose.deploy.yml down
+#
+# DB 파일 위치 (호스트)
+#   /volume1/docker/kt_youtube_monitor/youtube_monitor.db
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  youtube-monitor:
+    image: ghcr.io/${GITHUB_USERNAME}/youtube-monitor:latest
+    container_name: kt-youtube-monitor
+    restart: unless-stopped
+    ports:
+      - "8010:8000"
+    volumes:
+      # SQLite DB 및 앱 데이터 (호스트 영구 저장)
+      - /volume1/docker/kt_youtube_monitor:/app/data
+    env_file:
+      - .env
+    environment:
+      # 컨테이너 내부 경로 (/app/data) — volumes 마운트와 반드시 일치
+      DATABASE_URL: sqlite:///./data/youtube_monitor.db
+      DEBUG: "false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
