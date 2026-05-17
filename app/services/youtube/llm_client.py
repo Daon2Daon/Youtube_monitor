@@ -135,10 +135,13 @@ class LiteLLMClient:
         if not force_refresh and self._models_cache and now < self._models_cache_exp:
             return self._models_cache
 
-        resp = await self._client.get(
-            f"{self.base_url}/v1/models",
-            headers={"Authorization": f"Bearer {self.api_key}"} if self.api_key else {},
-        )
+        try:
+            resp = await self._client.get(
+                f"{self.base_url}/v1/models",
+                headers={"Authorization": f"Bearer {self.api_key}"} if self.api_key else {},
+            )
+        except httpx.HTTPError as e:
+            raise LiteLLMError(f"/v1/models 연결 실패 ({self.base_url}): {e}") from e
         if resp.status_code != 200:
             raise LiteLLMError(f"/v1/models 실패: {resp.status_code} - {resp.text}")
         models = ModelsResponse.from_openai_models(resp.json())
@@ -182,7 +185,10 @@ class LiteLLMClient:
             gen_cfg["responseSchema"] = response_schema
         body["generationConfig"] = gen_cfg
 
-        resp = await self._client.post(url, params={"key": self.api_key}, json=body)
+        try:
+            resp = await self._client.post(url, params={"key": self.api_key}, json=body)
+        except httpx.HTTPError as e:
+            raise LiteLLMError(f"Gemini native 연결 실패 ({url}): {e}") from e
         if resp.status_code != 200:
             raise LiteLLMError(f"Gemini native 분석 실패: {resp.status_code} - {resp.text}")
 
@@ -228,11 +234,14 @@ class LiteLLMClient:
         if max_tokens is not None:
             body["max_tokens"] = max_tokens
 
-        resp = await self._client.post(
-            f"{self.base_url}/v1/chat/completions",
-            headers={"Authorization": f"Bearer {self.api_key}"},
-            json=body,
-        )
+        try:
+            resp = await self._client.post(
+                f"{self.base_url}/v1/chat/completions",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                json=body,
+            )
+        except httpx.HTTPError as e:
+            raise LiteLLMError(f"chat completions 연결 실패 ({self.base_url}): {e}") from e
         if resp.status_code != 200:
             raise LiteLLMError(f"chat completions 실패: {resp.status_code} - {resp.text}")
         return ChatResult.from_openai_chat_completion(resp.json())
