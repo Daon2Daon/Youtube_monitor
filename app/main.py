@@ -4,6 +4,7 @@ YouTube Monitor 독립 앱 - FastAPI 메인 애플리케이션.
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -131,6 +132,13 @@ async def startup_event():
         scheduler_service.setup_youtube_jobs()
     except Exception as e:
         print(f"⚠️  YouTube Job 등록 실패: {e}")
+
+    # 야간제한 보정 즉시 실행 (재시작 시 누적 미발송 처리)
+    try:
+        from app.services.youtube.notify_service import _youtube_immediate_catchup_async
+        asyncio.create_task(_youtube_immediate_catchup_async())
+    except Exception as e:
+        print(f"⚠️  야간제한 보정 시작 시 실행 실패: {e}")
 
     # 등록된 Job 목록 출력
     jobs = scheduler_service.get_all_jobs()

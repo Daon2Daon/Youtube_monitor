@@ -187,7 +187,7 @@ class SchedulerService:
 
         # 예약발송·즉시발송 야간 보정 잡 초기화
         self.setup_youtube_notify_jobs()
-        self.setup_youtube_catchup_job()
+        self.update_youtube_catchup_job()
 
     def update_youtube_master_poll_job(self):
         """polling 주기 변경 시 YouTube 폴링/분석 interval 잡만 재등록."""
