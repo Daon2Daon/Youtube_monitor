@@ -16,18 +16,21 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: b
   )
 }
 
+const DEFAULT_ADD_FORM = {
+  channel_input: '',
+  category: '',
+  poll_interval_min: 720,
+  notify_enabled: true,
+  auto_poll_now: false,
+  initial_window_days: 1,
+}
+
 export default function Channels() {
   const [channels, setChannels] = useState<Channel[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
-  const [addForm, setAddForm] = useState({
-    channel_input: '',
-    category: '',
-    poll_interval_min: 720,
-    notify_enabled: true,
-    auto_poll_now: false,
-  })
+  const [addForm, setAddForm] = useState(DEFAULT_ADD_FORM)
   const [addLoading, setAddLoading] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Channel | null>(null)
@@ -60,7 +63,7 @@ export default function Channels() {
       })
       setChannels((prev) => [ch, ...prev])
       setAdding(false)
-      setAddForm({ channel_input: '', category: '', poll_interval_min: 720, notify_enabled: true, auto_poll_now: false })
+      setAddForm(DEFAULT_ADD_FORM)
     } catch (e) {
       setAddError((e as Error).message)
     } finally {
@@ -210,6 +213,18 @@ export default function Channels() {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">초기 탐색 윈도우 (일)</label>
+              <input
+                type="number"
+                min={1}
+                max={3650}
+                value={addForm.initial_window_days}
+                onChange={(e) => setAddForm({ ...addForm, initial_window_days: Number(e.target.value) })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">채널 추가 시 이 기간(일) 이내 영상을 가져옵니다.</p>
+            </div>
           </div>
           <div className="flex items-center gap-6">
             <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
@@ -278,15 +293,20 @@ export default function Channels() {
               {channels.map((ch) => (
                 <tr key={ch.channel_pk} className={`hover:bg-gray-50 ${!ch.is_active ? 'opacity-50' : ''}`}>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
+                    <a
+                      href={ch.channel_handle ? `https://www.youtube.com/${ch.channel_handle}` : `https://www.youtube.com/channel/${ch.channel_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 hover:opacity-80"
+                    >
                       {ch.thumbnail_url && (
                         <img src={ch.thumbnail_url} alt="" className="w-8 h-8 rounded-full object-cover" />
                       )}
                       <div>
-                        <p className="font-medium text-gray-900">{ch.channel_name}</p>
+                        <p className="font-medium text-gray-900 hover:text-blue-600">{ch.channel_name}</p>
                         {ch.channel_handle && <p className="text-xs text-gray-400">{ch.channel_handle}</p>}
                       </div>
-                    </div>
+                    </a>
                   </td>
                   <td className="text-center px-3 py-3">
                     <ToggleSwitch checked={ch.is_active} onChange={() => handleToggleActive(ch)} />

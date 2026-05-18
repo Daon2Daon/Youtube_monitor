@@ -160,6 +160,7 @@ export const channelApi = {
     poll_interval_min?: number
     notify_enabled?: boolean
     auto_poll_now?: boolean
+    initial_window_days?: number
   }) => request<Channel>('/channels', { method: 'POST', body: JSON.stringify(body) }),
 
   update: (pk: number, body: Partial<Pick<Channel, 'is_active' | 'notify_enabled' | 'poll_interval_min' | 'category'>>) =>

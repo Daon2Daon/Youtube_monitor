@@ -118,10 +118,11 @@ class MonitorService:
         session: AsyncSession,
         api_client: YouTubeAPIClient,
         backfill: bool = False,
+        window_days_override: Optional[int] = None,
     ) -> List[int]:
         """채널 폴링 → 신규 영상 INSERT → 새 video_pk 목록 반환."""
         now = datetime.now(timezone.utc)
-        window_days = max(1, int(self.polling.window_days or 1))
+        window_days = max(1, int(window_days_override or self.polling.window_days or 1))
         cutoff = now - timedelta(days=window_days)
 
         items: Sequence[PlaylistItemMeta] = await api_client.get_playlist_items_since(

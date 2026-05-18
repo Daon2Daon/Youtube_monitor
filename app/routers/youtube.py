@@ -279,7 +279,7 @@ async def add_channel(
     await session.flush()
 
     if body.auto_poll_now:
-        asyncio.create_task(_trigger_channel_poll(channel.channel_pk))
+        asyncio.create_task(_trigger_channel_poll(channel.channel_pk, window_days_override=body.initial_window_days))
 
     return channel
 
@@ -341,7 +341,7 @@ async def trigger_channel_poll(
     )
 
 
-async def _trigger_channel_poll(channel_pk: int) -> None:
+async def _trigger_channel_poll(channel_pk: int, window_days_override: Optional[int] = None) -> None:
     """백그라운드에서 단일 채널 모니터링 실행."""
     from app.services.youtube.db_engine import db_engine_manager, DBNotConfiguredError
     from app.services.youtube.monitor_service import MonitorService
@@ -365,6 +365,7 @@ async def _trigger_channel_poll(channel_pk: int) -> None:
                     channel=channel,
                     session=sess,
                     api_client=api_client,
+                    window_days_override=window_days_override,
                 )
 
         await api_client.aclose()
